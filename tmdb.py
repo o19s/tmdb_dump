@@ -1,4 +1,4 @@
-
+import gzip
 import requests
 import json
 import os
@@ -24,31 +24,6 @@ class TaintedDataException(RuntimeError):
     pass
 
 
-def movieList(movieIds, source='https://api.themoviedb.org/3/movie/top_rated', maxMovies=1000000):
-    url = source
-    numPages = maxMovies / 20
-    for page in range(1, int(numPages + 1)): #A
-        try:
-            print("GET IDS")
-            httpResp = tmdb_api.get(url, params={'page': page})  #B
-            if int(httpResp.headers['x-ratelimit-remaining']) < 10:
-                print("  (IDs) Sleeping due to rate limit, On %s/%s (%s remaining API TMDB requests allowed)" % \
-                    (page, numPages, httpResp.headers['x-ratelimit-remaining']))
-                time.sleep(TMDB_SLEEP_TIME_SECS)
-        except Exception as e:
-            print(e)
-            print(len(movieIds))
-        jsonResponse = json.loads(httpResp.text) #C
-        if 'results' not in jsonResponse:
-            print("Got weird response, assuming done")
-            print("Status %s" % httpResp.status_code)
-            print(json.dumps(jsonResponse, indent=2))
-            return movieIds
-        movies = jsonResponse['results']
-        for movie in movies: #D
-            movieIds.append(str(movie['id']))
-    return movieIds
-
 def getCastAndCrew(movieId, movie):
     httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s/credits" % movieId)
     if int(httpResp.headers['x-ratelimit-remaining']) < 10:
@@ -68,37 +43,49 @@ def getCastAndCrew(movieId, movie):
     movie['cast'] = credits['cast']
     movie['directors'] = directors
 
-def extract(startChunk=0, movieIds=[], chunkSize=5000):
+def extract(startChunk=0, movieIds=[], chunkSize=5000, existing_movies={}):
     movieDict = {}
     missing = 0
+    local = 0
+    fetched = 0
     for idx, movieId in enumerate(movieIds):
+        # Read ahead to the current chunk
         if movieId < (startChunk * chunkSize):
             continue
-        try:
-            httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s" % movieId)
-            if httpResp.status_code == 429:
-                print(httpResp.text)
-                raise TaintedDataException
-            if httpResp.status_code <= 300:
-                movie = json.loads(httpResp.text)
-                getCastAndCrew(movieId, movie)
-                movieDict[str(movieId)] = movie
-            elif httpResp.status_code == 404:
-                missing += 1
-            else:
-                print("Error %s for %s" % (httpResp.status_code, movieId))
-            if int(httpResp.headers['x-ratelimit-remaining']) < 10:
-                print(" (EXTR) Sleeping due to rate limit, On %s/%s (missing %s) (%s remaining API TMDB requests allowed)" % \
-                    (idx, len(movieIds), missing, httpResp.headers['x-ratelimit-remaining']))
-                time.sleep(TMDB_SLEEP_TIME_SECS)
-        except ConnectionError as e:
-            print(e)
+
+        # Try an existing tmdb.json
+        if str(movieId) in existing_movies:
+            movieDict[str(movieId)] = existing_movies[str(movieId)]
+            local += 1
+        else: # Go to the API
+            try:
+                httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s" % movieId)
+                if httpResp.status_code == 429:
+                    print(httpResp.text)
+                    raise TaintedDataException
+                if httpResp.status_code <= 300:
+                    movie = json.loads(httpResp.text)
+                    getCastAndCrew(movieId, movie)
+                    movieDict[str(movieId)] = movie
+                    fetched += 1
+                elif httpResp.status_code == 404:
+                    missing += 1
+                else:
+                    print("Error %s for %s" % (httpResp.status_code, movieId))
+                if int(httpResp.headers['x-ratelimit-remaining']) < 10:
+                    print(" (EXTR) Sleeping due to rate limit, On %s/%s (missing %s / local %s / fetched %s) (%s remaining API TMDB requests allowed)" % \
+                        (idx, len(movieIds), missing, local, fetched, httpResp.headers['x-ratelimit-remaining']))
+                    time.sleep(TMDB_SLEEP_TIME_SECS)
+            except ConnectionError as e:
+                print(e)
 
         if (movieId % chunkSize == (chunkSize - 1)):
             print("DONE CHUNK, LAST ID CHECKED %s" % movieId)
             yield movieDict
             movieDict = {}
             missing = 0
+            local = 0
+            fetched = 0
     yield movieDict
 
 
@@ -112,81 +99,48 @@ def lastMovieId(url='https://api.themoviedb.org/3/movie/latest'):
     print("Latest movie is %s (%s)" % (jsonResponse['id'], jsonResponse['title']))
     return int(jsonResponse['id'])
 
+def read_chunk(chunk_id):
+    with gzip.GzipFile('chunks/tmdb.%s.json.gz' % chunk_id) as f:
+        return json.loads(f.read().decode('utf-8'))
 
-
-
-def getIds(rebuild=False):
-    existingIds = []
-
-    print("Already know-about movies")
-    try:
-        with open('ids.json') as f:
-            existingIds = json.load(f)['ids']
-
-        with open('tmdb.json') as f:
-            tmdbIds = list(json.load(f).keys())
-
-            existingIds = list(set(tmdbIds + existingIds))
-
-        if not rebuild:
-            print("Using %s cached ids" % len(existingIds))
-            return existingIds
-        print("Rebuild=True, thus adding new movies...")
-    except IOError:
-        print("No existing ids.json and tmdb.json found, rebuilding")
-    print("Got %s movies" % len(existingIds))
-
-    print("Popular movies...")
-    movieIds = movieList(movieIds=existingIds, source='https://api.themoviedb.org/3/movie/popular')
-    existingIds = list(set(movieIds + existingIds))
-    print("Got %s movies" % len(existingIds))
-
-    print("Now playing movies...")
-    movieIds = movieList(movieIds=existingIds, source='https://api.themoviedb.org/3/movie/now_playing')
-    existingIds = list(set(movieIds + existingIds))
-    print("Got %s movies" % len(existingIds))
-
-
-    print("Top-rated movies...")
-    movieIds = movieList(movieIds=existingIds)
-    f = open('tmdb_movieIds_29apr2018.json', 'w')
-    existingIds = list(set(movieIds + existingIds))
-    print("Got %s movies" % len(existingIds))
-
-
-    print("Writing %s ids" % len(existingIds))
-
-    print("Got All Movie Ids")
-    f = open('ids.json', 'w')
-    f.write(json.dumps({"ids": existingIds}))
-
-    return existingIds
-
+def write_chunk(chunk_id, movie_dict):
+    with gzip.GzipFile('chunks/tmdb.%s.json.gz' % chunk_id, 'w') as f:
+        f.write(json.dumps(movie_dict).encode('utf-8'))
 
 def continueChunks(lastId):
-    # movieIds = getIds(rebuild=False)
     allTmdb = {}
+    existing_movies = {}
     atChunk = 0
+    try:
+        with open('tmdb.json') as f:
+            print("Using Existing tmdb.json")
+            existing_movies = json.load(f)
+    except FileNotFoundError:
+        pass
     for i in range(0, int(lastId / CHUNK_SIZE) + 1):
         try:
-            with open("chunks/tmdb.%s.json" % i) as f:
-                movies = json.load(f)
-                allTmdb = {**movies, **allTmdb}
+            movies = read_chunk(i)
+            allTmdb = {**movies, **allTmdb}
         except IOError:
             print("Starting at chunk %s; total %s" % (i, int(lastId/CHUNK_SIZE)))
             atChunk = i
             break
 
-    for idx, movieDict in enumerate(extract(startChunk=atChunk, chunkSize=CHUNK_SIZE, movieIds=range(lastId))):
+    for idx, movieDict in enumerate(extract(startChunk=atChunk, existing_movies=existing_movies,
+                                            chunkSize=CHUNK_SIZE, movieIds=range(lastId))):
         currChunk = idx + atChunk
-        with open("chunks/tmdb.%s.json" % currChunk, 'w') as f:
-            print("WRITING Chunk %s" % currChunk)
-            f.write(json.dumps(movieDict))
+        write_chunk(currChunk, movieDict)
     return True
 
 
+def ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
 
 if __name__ == "__main__":
+    ensure_dir('chunks/')
     lastId = lastMovieId()
     while True:
         try:
