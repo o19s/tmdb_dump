@@ -20,4 +20,4 @@ export TMDB_API_KEY=<get an API key from TMDB>
 python tmdb.py
 ```
 
-This script will crawl TMDB from 0 to the latest movie added to TMDB. Every 1000 movies will be dumped to the `chunks/` folder in gzipped form. 
+This script will crawl TMDB from 0 to the latest movie added to TMDB. Every 1000 movies will be dumped to the `chunks/` folder in gzipped json form. 
