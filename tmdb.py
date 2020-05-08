@@ -26,10 +26,6 @@ class TaintedDataException(RuntimeError):
 
 def getCastAndCrew(movieId, movie):
     httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s/credits" % movieId)
-    if int(httpResp.headers['x-ratelimit-remaining']) < 10:
-        print(" (CAST) Sleeping due to rate limit, (%s remaining API TMDB requests allowed)" % \
-            (httpResp.headers['x-ratelimit-remaining']))
-        time.sleep(TMDB_SLEEP_TIME_SECS)
     credits = json.loads(httpResp.text) #C
     try:
         crew = credits['crew']
@@ -72,10 +68,6 @@ def extract(startChunk=0, movieIds=[], chunkSize=5000, existing_movies={}):
                     missing += 1
                 else:
                     print("Error %s for %s" % (httpResp.status_code, movieId))
-                if int(httpResp.headers['x-ratelimit-remaining']) < 10:
-                    print(" (EXTR) Sleeping due to rate limit, On %s/%s (missing %s / local %s / fetched %s) (%s remaining API TMDB requests allowed)" % \
-                        (idx, len(movieIds), missing, local, fetched, httpResp.headers['x-ratelimit-remaining']))
-                    time.sleep(TMDB_SLEEP_TIME_SECS)
             except ConnectionError as e:
                 print(e)
 
