@@ -1,6 +1,6 @@
 ---------
 
-**Maintenance Note** This project is sporadically maintained by OpenSource Connections. We'll do our best to be responsive, but its largely on the back burner/here as starter code for you
+**Sporatically Maintained** This project is sporadically maintained by OpenSource Connections. We'll do our best to be responsive, but its largely on the back burner/here as starter code for you
 
 ---------
 
