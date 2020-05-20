@@ -20,4 +20,12 @@ export TMDB_API_KEY=<get an API key from TMDB>
 python tmdb.py
 ```
 
-This script will crawl TMDB from 0 to the latest movie added to TMDB. Every 1000 movies will be dumped to the `chunks/` folder in gzipped json form. 
+This script will crawl TMDB from 0 to the latest movie added to TMDB. Every 1000 movies will be dumped to the `chunks/` folder in gzipped json form.
+
+In order to clean the data for use in public (remove Adult films etc) we have a second script that collects the results in `chunks/` and filters them into a single JSON file with ~ 50,000 English feature length films.
+
+```
+python scrub_and_shrink.py
+```
+
+This will produce a JSON file `tmdb_{YYYY-MM-DD}.json`. The dating is to version the data so exisitng tutorials are not broken.
