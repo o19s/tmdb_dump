@@ -11,7 +11,7 @@
 # Dependencies
 
 - Python 3
-- [Requests library](https://2.python-requests.org//en/master/)
+- [Requests library](https://2.python-requests.org/en/master/)
 
 # To Run
 
@@ -28,4 +28,4 @@ In order to clean the data for use in public (remove Adult films etc) we have a 
 python scrub_and_shrink.py
 ```
 
-This will produce a JSON file `tmdb_{YYYY-MM-DD}.json`. The dating is to version the data so exisitng tutorials are not broken.
+This will produce a JSON file `tmdb_{YYYY-MM-DD}.json`. The dating is to version the data so existing tutorials are not broken.
