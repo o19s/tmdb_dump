@@ -4,8 +4,6 @@
 
 OSC uses this dataset in it's [training classes](https://opensourceconnections.com/training/), which if you are into search, you will be interested in!
 
-![Flow of TMDB data](tmdb_dataflows.png)
-
 # Dependencies
 
 - Python 3
@@ -27,3 +25,5 @@ python scrub_and_shrink.py
 ```
 
 This will produce a JSON file `tmdb_{YYYY-MM-DD}.json`. The dating is to version the data so existing tutorials are not broken.
+
+![Flow of TMDB data](tmdb_dataflows.png)
