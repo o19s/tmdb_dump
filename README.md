@@ -1,12 +1,10 @@
----------
-
-**Sporatically Maintained** This project is sporadically maintained by OpenSource Connections. We'll do our best to be responsive, but its largely on the back burner/here as starter code for you
-
----------
-
 # What is it?
 
 [TheMovieDB](http://themoviedb.org) is a Movie Database, useful for NLP, rescsys, and search experimentation. This repo crawls the TMDB API following the TMDB API rules, and places them into local gzipped JSON files so you can go forth and experiment with movie data.
+
+OSC uses this dataset in it's [training classes](https://opensourceconnections.com/training/), which if you are into search, you will be interested in!
+
+![Flow of TMDB data](tmdb_dataflows.png)
 
 # Dependencies
 
