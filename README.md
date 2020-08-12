@@ -27,3 +27,13 @@ python scrub_and_shrink.py
 This will produce a JSON file `tmdb_{YYYY-MM-DD}.json`. The dating is to version the data so existing tutorials are not broken.
 
 ![Flow of TMDB data](tmdb_dataflows.png)
+
+# Understanding Data Structure
+
+You can use `jq` to parse the JSON.   Just unzip a chunk and then do:
+
+> cat mychunk.json | jq .
+
+Or, to look at a specific movie dataset, look it up by id:
+
+> jq -c '.["702557"]' temp/tmdb.702.json | jq .
