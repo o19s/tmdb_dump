@@ -34,7 +34,7 @@ def scrub_chunks():
                     dat["poster_path"] is not None and
                     dat["runtime"] is not None and
                     dat["runtime"] > 59 and
-                    dat["release_date"] is not None
+                    dat["release_date"] 
                     ):
                     k = dat["id"]
                     keep.update({k : dat})
@@ -42,6 +42,6 @@ def scrub_chunks():
 
 if __name__ == "__main__":
     keep = scrub_chunks()
-    filename = "tmdb_" + str(date.today()) + ".json"
+    filename = "tmdb_dump_" + str(date.today()) + ".json"
     with open(filename, "w") as f:
         json.dump(keep, f)

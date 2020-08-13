@@ -24,7 +24,7 @@ In order to clean the data for use in public (remove Adult films etc) we have a 
 python scrub_and_shrink.py
 ```
 
-This will produce a JSON file `tmdb_{YYYY-MM-DD}.json`. The dating is to version the data so existing tutorials are not broken.
+This will produce a JSON file `tmdb_dump_{YYYY-MM-DD}.json`. The dating is to version the data so existing tutorials are not broken.
 
 ![Flow of TMDB data](tmdb_dataflows.png)
 
