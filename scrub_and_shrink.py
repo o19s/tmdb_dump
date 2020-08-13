@@ -33,7 +33,8 @@ def scrub_chunks():
                     dat["vote_count"] > 0 and
                     dat["poster_path"] is not None and
                     dat["runtime"] is not None and
-                    dat["runtime"] > 59
+                    dat["runtime"] > 59 and
+                    dat["release_date"] is not None
                     ):
                     k = dat["id"]
                     keep.update({k : dat})
