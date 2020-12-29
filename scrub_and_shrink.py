@@ -31,6 +31,7 @@ def scrub_chunks():
                 dat = movies[m]
                 if ( not dat["adult"] and
                     dat["vote_count"] > 5 and
+                    dat["budget"] > 1 and
                     dat["original_language"] == "en" and
                     dat["poster_path"] is not None and
                     dat["runtime"] is not None and
