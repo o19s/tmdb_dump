@@ -4,6 +4,8 @@ import json
 import os
 import time
 from requests.exceptions import ConnectionError
+import boto3
+from botocore.exceptions import ClientError
 
 # you'll need to have an API key for TMDB
 # to run these examples,
@@ -98,6 +100,9 @@ def read_chunk(chunk_id):
 def write_chunk(chunk_id, movie_dict):
     with gzip.GzipFile('chunks/tmdb.%s.json.gz' % chunk_id, 'w') as f:
         f.write(json.dumps(movie_dict).encode('utf-8'))
+    s3 = boto3.client('s3')
+    with open('chunks/tmdb.%s.json.gz' % chunk_id, "rb") as f:
+        s3.upload_fileobj(f, "tmdb-movies-json", 'tmdb.%s.json.gz' % chunk_id)
 
 def continueChunks(lastId):
     allTmdb = {}
@@ -142,3 +147,25 @@ if __name__ == "__main__":
             print("Chunk tainted, trying again")
             time.sleep(TMDB_SLEEP_TIME_SECS*2)
             continue
+
+# def upload_file(file_name, bucket, object_name=None):
+#     """Upload a file to an S3 bucket
+
+#     :param file_name: File to upload
+#     :param bucket: Bucket to upload to
+#     :param object_name: S3 object name. If not specified then file_name is used
+#     :return: True if file was uploaded, else False
+#     """
+
+#     # If S3 object_name was not specified, use file_name
+#     if object_name is None:
+#         object_name = file_name
+
+#     # Upload the file
+#     s3_client = boto3.client('s3')
+#     try:
+#         response = s3_client.upload_file(file_name, bucket, object_name)
+#     except ClientError as e:
+#         logging.error(e)
+#         return False
+#     return True
