@@ -30,7 +30,7 @@ def getCastAndCrew(movieId, movie):
     httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s/credits" % movieId)
     credits = json.loads(httpResp.text) #C
     try:
-        crew = credits['crew']
+        crew = credits.get('crew', [])
         directors = []
         for crewMember in crew: #D
             if crewMember['job'] == 'Director':
@@ -38,7 +38,7 @@ def getCastAndCrew(movieId, movie):
     except KeyError as e:
         print(e)
         print(credits)
-    movie['cast'] = credits['cast']
+    movie['cast'] = credits.get('cast', [])
     movie['directors'] = directors
 
 def extract(startChunk=0, movieIds=[], chunkSize=5000, existing_movies={}):
