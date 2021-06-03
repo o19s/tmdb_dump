@@ -57,13 +57,13 @@ def extract(startChunk=0, movieIds=[], chunkSize=5000, existing_movies={}):
             local += 1
         else: # Go to the API
             try:
-                httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s" % movieId)
+                httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s?language=en-US&append_to_response=credits,images,keywords,reviews,videos,alternative_titles,external_ids,release_dates,translations" % movieId)
                 if httpResp.status_code == 429:
                     print(httpResp.text)
                     raise TaintedDataException
                 if httpResp.status_code <= 300:
                     movie = json.loads(httpResp.text)
-                    getCastAndCrew(movieId, movie)
+                    # getCastAndCrew(movieId, movie)
                     movieDict[str(movieId)] = movie
                     fetched += 1
                 elif httpResp.status_code == 404:
@@ -102,7 +102,7 @@ def write_chunk(chunk_id, movie_dict):
         f.write(json.dumps(movie_dict).encode('utf-8'))
     s3 = boto3.client('s3')
     with open('chunks/tmdb.%s.json.gz' % chunk_id, "rb") as f:
-        s3.upload_fileobj(f, "tmdb-movies-json", 'tmdb.%s.json.gz' % chunk_id)
+        s3.upload_fileobj(f, "tmdb-movies-json-with-all-details", 'tmdb.%s.json.gz' % chunk_id)
 
 def continueChunks(lastId):
     allTmdb = {}
