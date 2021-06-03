@@ -1,4 +1,4 @@
-import gzip
+# import gzip
 import requests
 import json
 import os
@@ -42,7 +42,7 @@ def getCastAndCrew(movieId, movie):
     movie['directors'] = directors
 
 def extract(startChunk=0, movieIds=[], chunkSize=5000, existing_movies={}):
-    movieDict = {}
+    movieDict = []
     missing = 0
     local = 0
     fetched = 0
@@ -52,31 +52,32 @@ def extract(startChunk=0, movieIds=[], chunkSize=5000, existing_movies={}):
             continue
 
         # Try an existing tmdb.json
-        if str(movieId) in existing_movies:
-            movieDict[str(movieId)] = existing_movies[str(movieId)]
-            local += 1
-        else: # Go to the API
-            try:
-                httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s?language=en-US&append_to_response=credits,images,keywords,reviews,videos,alternative_titles,external_ids,release_dates,translations" % movieId)
-                if httpResp.status_code == 429:
-                    print(httpResp.text)
-                    raise TaintedDataException
-                if httpResp.status_code <= 300:
-                    movie = json.loads(httpResp.text)
-                    # getCastAndCrew(movieId, movie)
-                    movieDict[str(movieId)] = movie
-                    fetched += 1
-                elif httpResp.status_code == 404:
-                    missing += 1
-                else:
-                    print("Error %s for %s" % (httpResp.status_code, movieId))
-            except ConnectionError as e:
-                print(e)
+        # if str(movieId) in existing_movies:
+        #     movieDict[str(movieId)] = existing_movies[str(movieId)]
+        #     local += 1
+        # else: # Go to the API
+        try:
+            httpResp = tmdb_api.get("https://api.themoviedb.org/3/movie/%s?language=en-US&append_to_response=credits,images,keywords,reviews,videos,alternative_titles,external_ids,release_dates,translations" % movieId)
+            if httpResp.status_code == 429:
+                print(httpResp.text)
+                raise TaintedDataException
+            if httpResp.status_code <= 300:
+                movie = json.loads(httpResp.text)
+                # getCastAndCrew(movieId, movie)
+                # movieDict[str(movieId)] = movie
+                movieDict.append(movie)
+                fetched += 1
+            elif httpResp.status_code == 404:
+                missing += 1
+            else:
+                print("Error %s for %s" % (httpResp.status_code, movieId))
+        except ConnectionError as e:
+            print(e)
 
         if (movieId % chunkSize == (chunkSize - 1)):
             print("DONE CHUNK, LAST ID CHECKED %s" % movieId)
             yield movieDict
-            movieDict = {}
+            movieDict = []
             missing = 0
             local = 0
             fetched = 0
@@ -94,19 +95,19 @@ def lastMovieId(url='https://api.themoviedb.org/3/movie/latest'):
     return int(jsonResponse['id'])
 
 def read_chunk(chunk_id):
-    with gzip.GzipFile('chunks/tmdb.%s.json.gz' % chunk_id) as f:
-        return json.loads(f.read().decode('utf-8'))
+    with open('chunks/tmdb.%s.json' % chunk_id, 'r') as f:
+        return json.loads(f.read())
 
 def write_chunk(chunk_id, movie_dict):
-    with gzip.GzipFile('chunks/tmdb.%s.json.gz' % chunk_id, 'w') as f:
-        f.write(json.dumps(movie_dict).encode('utf-8'))
+    with open('chunks/tmdb.%s.json' % chunk_id, 'w') as f:
+        f.write(json.dumps(movie_dict))
     s3 = boto3.client('s3')
-    with open('chunks/tmdb.%s.json.gz' % chunk_id, "rb") as f:
-        s3.upload_fileobj(f, "tmdb-movies-json-with-all-details", 'tmdb.%s.json.gz' % chunk_id)
+    with open('chunks/tmdb.%s.json' % chunk_id, "rb") as f:
+        s3.upload_fileobj(f, "tmdb-movies-json-with-all-details", 'tmdb.%s.json' % chunk_id)
 
 def continueChunks(lastId):
-    allTmdb = {}
-    existing_movies = {}
+    allTmdb = []
+    existing_movies = []
     atChunk = 0
     try:
         with open('tmdb.json') as f:
@@ -117,7 +118,7 @@ def continueChunks(lastId):
     for i in range(0, int(lastId / CHUNK_SIZE) + 1):
         try:
             movies = read_chunk(i)
-            allTmdb = {**movies, **allTmdb}
+            allTmdb = [*movies, *allTmdb]
         except IOError:
             print("Starting at chunk %s; total %s" % (i, int(lastId/CHUNK_SIZE)))
             atChunk = i
